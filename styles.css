@@ -1,0 +1,138 @@
+:root {
+  --ink: #17212c;
+  --soft: #5c6a79;
+  --line: rgba(23, 33, 44, 0.16);
+  --panel: rgba(255, 255, 255, 0.9);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", Tahoma, sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 10% 15%, rgba(60, 126, 255, 0.2), transparent 28%),
+    radial-gradient(circle at 90% 85%, rgba(250, 113, 95, 0.22), transparent 30%),
+    linear-gradient(180deg, #f2f4ee, #e8ebdf);
+}
+
+.shell {
+  width: min(980px, calc(100vw - 28px));
+  margin: 24px auto;
+  display: grid;
+  gap: 12px;
+}
+
+.panel {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel);
+  padding: 14px;
+}
+
+h1,
+h2 {
+  margin: 0;
+}
+
+p {
+  color: var(--soft);
+}
+
+.slider-grid {
+  margin-top: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+label {
+  display: grid;
+  gap: 5px;
+  font-weight: 700;
+}
+
+input[type="range"] {
+  width: 100%;
+}
+
+button {
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 14px;
+  background: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.actions {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.86rem;
+  color: var(--soft);
+}
+
+.profile-actions {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.profile-actions input,
+.profile-actions select {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: #fff;
+}
+
+.profile {
+  margin-top: 10px;
+  font-family: Consolas, monospace;
+  font-size: 0.85rem;
+}
+
+.playlist {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+}
+
+.track {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 9px;
+}
+
+.track h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.track p {
+  margin: 6px 0 0;
+}
+
+.track button {
+  margin-top: 8px;
+}
+
+.fav-btn {
+  border-color: rgba(250, 113, 95, 0.3);
+  color: #9b3c31;
+}

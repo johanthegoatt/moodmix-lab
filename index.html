@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MoodMix Lab</title>
+  <meta name="description" content="Mood slider based playlist generator with local catalog.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="shell">
+    <section class="panel">
+      <h1>MoodMix Lab</h1>
+      <p>Create a playlist by tuning your current mood profile.</p>
+
+      <div class="slider-grid">
+        <label>Energy <input id="energy" type="range" min="0" max="100" value="60"></label>
+        <label>Focus <input id="focus" type="range" min="0" max="100" value="55"></label>
+        <label>Chill <input id="chill" type="range" min="0" max="100" value="45"></label>
+        <label>Joy <input id="joy" type="range" min="0" max="100" value="70"></label>
+      </div>
+
+      <div class="actions">
+        <button id="refresh" type="button">Refresh Playlist</button>
+        <label class="checkbox-label"><input id="discovery" type="checkbox"> Discovery Mode</label>
+        <label class="checkbox-label"><input id="energy-ramp" type="checkbox"> Energy Ramp</label>
+      </div>
+      <div class="actions">
+        <label for="diversity">Diversity Weight <input id="diversity" type="range" min="0" max="100" value="50"></label>
+        <span id="diversity-value">50</span>
+      </div>
+
+      <div class="profile-actions">
+        <input id="preset-name" type="text" placeholder="Preset name">
+        <button id="save-preset" type="button">Save Preset</button>
+        <select id="preset-select">
+          <option value="">Load Preset...</option>
+        </select>
+      </div>
+      <p id="profile" class="profile"></p>
+    </section>
+
+    <section class="panel">
+      <h2>Top Matches</h2>
+      <ol id="playlist" class="playlist"></ol>
+      <h2>Favorites</h2>
+      <ul id="favorites" class="playlist"></ul>
+    </section>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
