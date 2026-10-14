@@ -112,11 +112,16 @@ function pickWithDiversity(profile, sorted, limit, diversityWeight = 50) {
   return selected;
 }
 
-function applyEnergyRamp(scored, limit) {
-  return [...scored]
-    .slice(0, Math.max(limit * 2, limit))
-    .sort((left, right) => left.mood.energy - right.mood.energy || right.score - left.score)
-    .slice(0, limit);
+// Energy ramp changes the order, never the picks. It used to take the top
+// 2 x limit matches and keep the lowest-energy ones, so a high-energy
+// profile got its worst matches. Now the best `limit` tracks are chosen
+// first and then played calm to lively, the gradual build that playlist
+// studies find listeners prefer over big jumps between neighbours
+// (Bonnin & Jannach, ACM Computing Surveys 2014, "smooth transitions").
+function applyEnergyRamp(picked, limit) {
+  return [...picked]
+    .slice(0, limit)
+    .sort((left, right) => left.mood.energy - right.mood.energy || right.score - left.score);
 }
 
 export function buildPlaylistAdvanced(profile, catalog = localCatalog, limit = 5, options = {}) {
@@ -133,7 +138,7 @@ export function buildPlaylistAdvanced(profile, catalog = localCatalog, limit = 5
   }
 
   if (options.energyRamp) {
-    return applyEnergyRamp(scored, safeLimit);
+    return applyEnergyRamp(scored.slice(0, safeLimit), safeLimit);
   }
 
   return scored.slice(0, safeLimit);

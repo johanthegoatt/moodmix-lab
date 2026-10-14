@@ -72,3 +72,13 @@ test("buildPlaylistAdvanced supports energy ramp sorting", () => {
     assert.equal(playlist[i - 1].mood.energy <= playlist[i].mood.energy, true);
   }
 });
+
+test("energy ramp reorders the best matches instead of swapping in calm tracks", () => {
+  const profile = { energy: 85, focus: 55, chill: 25, joy: 80 };
+  for (const discovery of [false, true]) {
+    const picks = buildPlaylistAdvanced(profile, undefined, 4, { discovery });
+    const ramp = buildPlaylistAdvanced(profile, undefined, 4, { discovery, energyRamp: true });
+    assert.deepEqual(ramp.map((t) => t.id).sort(), picks.map((t) => t.id).sort());
+    assert.equal(ramp.some((t) => t.id === "late-window"), false);
+  }
+});
