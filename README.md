@@ -11,7 +11,8 @@ MoodMix Lab is a local web project that builds playlists from mood sliders and p
 - Discovery mode to increase artist diversity in recommendations
 - Persistent saved profile presets
 - Favorite tracks collection stored locally
-- Lightweight browser audio preview tones (no external APIs)
+- Mood previews: a short arpeggio per track, major or minor from joy, faster with energy, softer when chill (Gabrielsson & Lindström 2010)
+- Energy ramp keeps the best matches and plays them calm to lively
 
 ## Run
 ```bash

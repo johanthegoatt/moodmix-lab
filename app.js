@@ -1,4 +1,5 @@
 import { buildPlaylistAdvanced, localCatalog, normalizeProfile } from "./src/recommender.js";
+import { previewPlan } from "./src/preview.js";
 import { loadFavorites, loadProfiles, saveFavorites, saveProfiles } from "./src/store.js";
 
 const sliders = {
@@ -58,23 +59,44 @@ function renderPresetOptions() {
   }
 }
 
-function playPreview(hz) {
+let stopPreview = null;
+
+async function playPreview(trackId) {
+  const track = localCatalog.find((item) => item.id === trackId);
+  if (!track) return;
   if (!audioCtx) {
     audioCtx = new AudioContext();
   }
+  // Browsers start the context suspended until a click; resume it, and
+  // cut off a preview that is still playing so two never overlap.
+  if (audioCtx.state === "suspended") await audioCtx.resume();
+  if (stopPreview) stopPreview();
 
-  const oscillator = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  oscillator.type = "triangle";
-  oscillator.frequency.value = hz;
-  gain.gain.value = 0.001;
-  oscillator.connect(gain);
-  gain.connect(audioCtx.destination);
-
-  oscillator.start();
-  gain.gain.exponentialRampToValueAtTime(0.12, audioCtx.currentTime + 0.02);
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
-  oscillator.stop(audioCtx.currentTime + 0.36);
+  const plan = previewPlan(track);
+  const start = audioCtx.currentTime + 0.02;
+  const master = audioCtx.createGain();
+  master.gain.value = 0.9;
+  master.connect(audioCtx.destination);
+  const oscillators = plan.notes.map((hz, index) => {
+    const at = start + index * plan.step;
+    const oscillator = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    oscillator.type = plan.wave;
+    oscillator.frequency.value = hz;
+    gain.gain.setValueAtTime(0.0001, at);
+    gain.gain.exponentialRampToValueAtTime(plan.wave === "sawtooth" ? 0.06 : 0.12, at + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, at + plan.step + 0.25);
+    oscillator.connect(gain);
+    gain.connect(master);
+    oscillator.start(at);
+    oscillator.stop(at + plan.step + 0.3);
+    return oscillator;
+  });
+  stopPreview = () => {
+    master.gain.setTargetAtTime(0, audioCtx.currentTime, 0.02);
+    oscillators.forEach((oscillator) => { try { oscillator.stop(audioCtx.currentTime + 0.1); } catch {} });
+    stopPreview = null;
+  };
 }
 
 function render() {
@@ -99,7 +121,7 @@ function render() {
     item.innerHTML = `
       <h3>${track.title} - ${track.artist}</h3>
       <p>Match score: ${track.score} | Serendipity: ${track.serendipity}</p>
-      <button type="button" data-preview="${track.previewHz}">Play Preview Tone</button>
+      <button type="button" data-preview="${track.id}">Hear the mood (${previewPlan(track).mode}, ${previewPlan(track).step < 0.25 ? "quick" : "slow"})</button>
       <button type="button" class="fav-btn" data-favorite-id="${track.id}">${favoriteLabel}</button>
     `;
     playlistEl.appendChild(item);
@@ -166,7 +188,7 @@ Object.values(sliders).forEach((slider) => {
 function handleTrackAction(event) {
   const button = event.target.closest("button[data-preview]");
   if (button) {
-    playPreview(Number(button.dataset.preview));
+    playPreview(button.dataset.preview);
     return;
   }
 
