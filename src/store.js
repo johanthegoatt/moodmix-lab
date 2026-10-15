@@ -31,3 +31,18 @@ export function saveFavorites(favorites, storage = localStorage) {
   storage.setItem(FAVORITE_KEY, JSON.stringify(favorites));
 }
 
+
+const LIBRARY_KEY = "moodmix:library:v1";
+
+export function loadLibrary(storage = localStorage) {
+  try {
+    const raw = storage.getItem(LIBRARY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveLibrary(tracks, storage = localStorage) {
+  storage.setItem(LIBRARY_KEY, JSON.stringify(tracks));
+}

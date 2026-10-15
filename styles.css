@@ -136,3 +136,8 @@ button {
   border-color: rgba(250, 113, 95, 0.3);
   color: #9b3c31;
 }
+
+#track-form h2 {
+  width: 100%;
+  margin: 1rem 0 0;
+}

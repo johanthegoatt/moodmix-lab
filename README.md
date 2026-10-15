@@ -13,6 +13,7 @@ MoodMix Lab is a local web project that builds playlists from mood sliders and p
 - Favorite tracks collection stored locally
 - Mood previews: a short arpeggio per track, major or minor from joy, faster with energy, softer when chill (Gabrielsson & Lindström 2010)
 - Order the picks best match first, as an energy ramp (calm to lively), or as a smooth flow: the order with the least total mood change across all four moods, found by nearest neighbour plus 2-opt
+- Add your own songs: title and artist, tagged with the current slider mood, saved in the browser and mixed into recommendations
 
 ## Run
 ```bash

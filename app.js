@@ -1,6 +1,7 @@
 import { buildPlaylistAdvanced, flowRoughness, localCatalog, normalizeProfile } from "./src/recommender.js";
 import { previewPlan } from "./src/preview.js";
-import { loadFavorites, loadProfiles, saveFavorites, saveProfiles } from "./src/store.js";
+import { makeCustomTrack, mergeCatalog, sanitizeLibrary } from "./src/library.js";
+import { loadFavorites, loadLibrary, loadProfiles, saveFavorites, saveLibrary, saveProfiles } from "./src/store.js";
 
 const sliders = {
   energy: document.getElementById("energy"),
@@ -20,10 +21,42 @@ const diversityValueEl = document.getElementById("diversity-value");
 const presetNameInput = document.getElementById("preset-name");
 const savePresetBtn = document.getElementById("save-preset");
 const presetSelect = document.getElementById("preset-select");
+const trackForm = document.getElementById("track-form");
+const trackTitleInput = document.getElementById("track-title");
+const trackArtistInput = document.getElementById("track-artist");
+const libraryEl = document.getElementById("library");
 
 let audioCtx;
 const profiles = loadProfiles();
 const favorites = new Set(loadFavorites());
+let library = sanitizeLibrary(loadLibrary());
+
+function catalog() {
+  return mergeCatalog(localCatalog, library);
+}
+
+function moodLine(track) {
+  return `energy ${track.mood.energy}, focus ${track.mood.focus}, chill ${track.mood.chill}, joy ${track.mood.joy}`;
+}
+
+function trackItem(track, detail, buttons) {
+  const item = document.createElement("li");
+  item.className = "track";
+  const heading = document.createElement("h3");
+  heading.textContent = `${track.title} - ${track.artist}`;
+  const meta = document.createElement("p");
+  meta.textContent = detail;
+  item.append(heading, meta);
+  for (const [label, data] of buttons) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = label;
+    Object.assign(button.dataset, data);
+    if (data.favoriteId) button.className = "fav-btn";
+    item.append(button);
+  }
+  return item;
+}
 
 function profileFromUi() {
   return normalizeProfile({
@@ -62,7 +95,7 @@ function renderPresetOptions() {
 let stopPreview = null;
 
 async function playPreview(trackId) {
-  const track = localCatalog.find((item) => item.id === trackId);
+  const track = catalog().find((item) => item.id === trackId);
   if (!track) return;
   if (!audioCtx) {
     audioCtx = new AudioContext();
@@ -101,7 +134,7 @@ async function playPreview(trackId) {
 
 function render() {
   const profile = profileFromUi();
-  const playlist = buildPlaylistAdvanced(profile, localCatalog, 5, {
+  const playlist = buildPlaylistAdvanced(profile, catalog(), 5, {
     discovery: discoveryCheckbox.checked,
     order: orderSelect.value,
     diversityWeight: Number(diversitySlider.value || 50)
@@ -117,25 +150,11 @@ function render() {
   playlistEl.innerHTML = "";
 
   for (const track of playlist) {
-    const favoriteLabel = favorites.has(track.id) ? "Unfavorite" : "Favorite";
-    const item = document.createElement("li");
-    item.className = "track";
     const plan = previewPlan(track);
-    const heading = document.createElement("h3");
-    heading.textContent = `${track.title} - ${track.artist}`;
-    const meta = document.createElement("p");
-    meta.textContent = `Match score: ${track.score} | Serendipity: ${track.serendipity}`;
-    const preview = document.createElement("button");
-    preview.type = "button";
-    preview.dataset.preview = track.id;
-    preview.textContent = `Hear the mood (${plan.mode}, ${plan.step < 0.25 ? "quick" : "slow"})`;
-    const favorite = document.createElement("button");
-    favorite.type = "button";
-    favorite.className = "fav-btn";
-    favorite.dataset.favoriteId = track.id;
-    favorite.textContent = favoriteLabel;
-    item.append(heading, meta, preview, favorite);
-    playlistEl.appendChild(item);
+    playlistEl.append(trackItem(track, `Match score: ${track.score} | Serendipity: ${track.serendipity}`, [
+      [`Hear the mood (${plan.mode}, ${plan.step < 0.25 ? "quick" : "slow"})`, { preview: track.id }],
+      [favorites.has(track.id) ? "Unfavorite" : "Favorite", { favoriteId: track.id }]
+    ]));
   }
 
   renderFavorites();
@@ -143,7 +162,7 @@ function render() {
 
 function renderFavorites() {
   favoritesEl.innerHTML = "";
-  const tracks = localCatalog.filter((track) => favorites.has(track.id));
+  const tracks = catalog().filter((track) => favorites.has(track.id));
 
   if (tracks.length === 0) {
     const item = document.createElement("li");
@@ -155,14 +174,17 @@ function renderFavorites() {
 
   tracks.sort((left, right) => left.title.localeCompare(right.title));
   for (const track of tracks) {
-    const item = document.createElement("li");
-    item.className = "track";
-    item.innerHTML = `
-      <h3>${track.title} - ${track.artist}</h3>
-      <p>Mood profile: energy ${track.mood.energy}, focus ${track.mood.focus}, chill ${track.mood.chill}, joy ${track.mood.joy}</p>
-      <button type="button" class="fav-btn" data-favorite-id="${track.id}">Remove Favorite</button>
-    `;
-    favoritesEl.append(item);
+    favoritesEl.append(trackItem(track, `Mood profile: ${moodLine(track)}`, [["Remove Favorite", { favoriteId: track.id }]]));
+  }
+}
+
+function renderLibrary() {
+  libraryEl.innerHTML = "";
+  for (const track of library) {
+    libraryEl.append(trackItem(track, `Mood profile: ${moodLine(track)}`, [
+      ["Hear the mood", { preview: track.id }],
+      ["Remove", { removeId: track.id }]
+    ]));
   }
 }
 
@@ -196,7 +218,36 @@ Object.values(sliders).forEach((slider) => {
   slider.addEventListener("input", render);
 });
 
+trackForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  try {
+    const track = makeCustomTrack(
+      { title: trackTitleInput.value, artist: trackArtistInput.value, mood: profileFromUi() },
+      catalog().map((item) => item.id)
+    );
+    library.push(track);
+    saveLibrary(library);
+    trackForm.reset();
+    renderLibrary();
+    render();
+  } catch (error) {
+    profileEl.textContent = error.message;
+  }
+});
+
 function handleTrackAction(event) {
+  const removeButton = event.target.closest("button[data-remove-id]");
+  if (removeButton) {
+    const id = removeButton.dataset.removeId;
+    library = library.filter((track) => track.id !== id);
+    favorites.delete(id);
+    saveLibrary(library);
+    saveFavorites(Array.from(favorites));
+    renderLibrary();
+    render();
+    return;
+  }
+
   const button = event.target.closest("button[data-preview]");
   if (button) {
     playPreview(button.dataset.preview);
@@ -219,6 +270,8 @@ function handleTrackAction(event) {
 
 playlistEl.addEventListener("click", handleTrackAction);
 favoritesEl.addEventListener("click", handleTrackAction);
+libraryEl.addEventListener("click", handleTrackAction);
 
 renderPresetOptions();
+renderLibrary();
 render();
