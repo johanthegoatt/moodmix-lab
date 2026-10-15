@@ -82,3 +82,30 @@ test("energy ramp reorders the best matches instead of swapping in calm tracks",
     assert.equal(ramp.some((t) => t.id === "late-window"), false);
   }
 });
+
+test("smooth flow never makes the total mood change worse than the pick order", async () => {
+  const { smoothFlow, flowRoughness, buildPlaylistAdvanced, localCatalog } = await import("../src/recommender.js");
+  const profile = { energy: 50, focus: 50, chill: 50, joy: 50 };
+  const picked = buildPlaylistAdvanced(profile, localCatalog, 6, {});
+  const smooth = smoothFlow(picked);
+  assert.equal(smooth.length, picked.length);
+  assert.deepEqual(new Set(smooth.map((t) => t.id)), new Set(picked.map((t) => t.id)));
+  assert.ok(flowRoughness(smooth) <= flowRoughness(picked));
+});
+
+test("smooth flow finds the best order on a small set", async () => {
+  const { smoothFlow, flowRoughness } = await import("../src/recommender.js");
+  const at = (id, energy, focus, chill, joy) => ({ id, mood: { energy, focus, chill, joy } });
+  const tracks = [at("a", 10, 10, 10, 10), at("d", 90, 90, 90, 90), at("b", 40, 40, 40, 40), at("c", 60, 60, 60, 60)];
+  assert.deepEqual(smoothFlow(tracks).map((t) => t.id), ["a", "b", "c", "d"]);
+  // Steps of 60, 40 and 60 between neighbours.
+  assert.ok(Math.abs(flowRoughness(smoothFlow(tracks)) - 160 / 3) < 1e-9);
+});
+
+test("smooth order keeps the same picks as the plain playlist", async () => {
+  const { buildPlaylistAdvanced, localCatalog } = await import("../src/recommender.js");
+  const profile = { energy: 80, focus: 40, chill: 20, joy: 90 };
+  const plain = buildPlaylistAdvanced(profile, localCatalog, 3, {});
+  const smooth = buildPlaylistAdvanced(profile, localCatalog, 3, { order: "smooth" });
+  assert.deepEqual(new Set(smooth.map((t) => t.id)), new Set(plain.map((t) => t.id)));
+});

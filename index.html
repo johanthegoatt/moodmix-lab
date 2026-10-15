@@ -23,7 +23,13 @@
       <div class="actions">
         <button id="refresh" type="button">Refresh Playlist</button>
         <label class="checkbox-label"><input id="discovery" type="checkbox"> Discovery Mode</label>
-        <label class="checkbox-label"><input id="energy-ramp" type="checkbox"> Energy Ramp</label>
+        <label for="order">Order
+          <select id="order">
+            <option value="match">Best match first</option>
+            <option value="ramp">Energy ramp</option>
+            <option value="smooth">Smooth flow</option>
+          </select>
+        </label>
       </div>
       <div class="actions">
         <label for="diversity">Diversity Weight <input id="diversity" type="range" min="0" max="100" value="50"></label>

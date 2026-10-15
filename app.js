@@ -1,4 +1,4 @@
-import { buildPlaylistAdvanced, localCatalog, normalizeProfile } from "./src/recommender.js";
+import { buildPlaylistAdvanced, flowRoughness, localCatalog, normalizeProfile } from "./src/recommender.js";
 import { previewPlan } from "./src/preview.js";
 import { loadFavorites, loadProfiles, saveFavorites, saveProfiles } from "./src/store.js";
 
@@ -14,7 +14,7 @@ const favoritesEl = document.getElementById("favorites");
 const profileEl = document.getElementById("profile");
 const refreshBtn = document.getElementById("refresh");
 const discoveryCheckbox = document.getElementById("discovery");
-const energyRampCheckbox = document.getElementById("energy-ramp");
+const orderSelect = document.getElementById("order");
 const diversitySlider = document.getElementById("diversity");
 const diversityValueEl = document.getElementById("diversity-value");
 const presetNameInput = document.getElementById("preset-name");
@@ -103,27 +103,38 @@ function render() {
   const profile = profileFromUi();
   const playlist = buildPlaylistAdvanced(profile, localCatalog, 5, {
     discovery: discoveryCheckbox.checked,
-    energyRamp: energyRampCheckbox.checked,
+    order: orderSelect.value,
     diversityWeight: Number(diversitySlider.value || 50)
   });
   const mode = discoveryCheckbox.checked ? "discovery" : "precision";
-  const rampMode = energyRampCheckbox.checked ? "energy-ramp on" : "energy-ramp off";
+  const orderNames = { match: "best match first", ramp: "energy ramp", smooth: "smooth flow" };
+  const rampMode = orderNames[orderSelect.value];
   const diversityWeight = Number(diversitySlider.value || 50);
   diversityValueEl.textContent = String(diversityWeight);
 
-  profileEl.textContent = `Mode ${mode} (${rampMode}, diversity ${diversityWeight}) => energy ${profile.energy}, focus ${profile.focus}, chill ${profile.chill}, joy ${profile.joy}`;
+  const roughness = flowRoughness(playlist).toFixed(0);
+  profileEl.textContent = `Mode ${mode} (${rampMode}, diversity ${diversityWeight}, average step ${roughness}) => energy ${profile.energy}, focus ${profile.focus}, chill ${profile.chill}, joy ${profile.joy}`;
   playlistEl.innerHTML = "";
 
   for (const track of playlist) {
     const favoriteLabel = favorites.has(track.id) ? "Unfavorite" : "Favorite";
     const item = document.createElement("li");
     item.className = "track";
-    item.innerHTML = `
-      <h3>${track.title} - ${track.artist}</h3>
-      <p>Match score: ${track.score} | Serendipity: ${track.serendipity}</p>
-      <button type="button" data-preview="${track.id}">Hear the mood (${previewPlan(track).mode}, ${previewPlan(track).step < 0.25 ? "quick" : "slow"})</button>
-      <button type="button" class="fav-btn" data-favorite-id="${track.id}">${favoriteLabel}</button>
-    `;
+    const plan = previewPlan(track);
+    const heading = document.createElement("h3");
+    heading.textContent = `${track.title} - ${track.artist}`;
+    const meta = document.createElement("p");
+    meta.textContent = `Match score: ${track.score} | Serendipity: ${track.serendipity}`;
+    const preview = document.createElement("button");
+    preview.type = "button";
+    preview.dataset.preview = track.id;
+    preview.textContent = `Hear the mood (${plan.mode}, ${plan.step < 0.25 ? "quick" : "slow"})`;
+    const favorite = document.createElement("button");
+    favorite.type = "button";
+    favorite.className = "fav-btn";
+    favorite.dataset.favoriteId = track.id;
+    favorite.textContent = favoriteLabel;
+    item.append(heading, meta, preview, favorite);
     playlistEl.appendChild(item);
   }
 
@@ -157,7 +168,7 @@ function renderFavorites() {
 
 refreshBtn.addEventListener("click", render);
 discoveryCheckbox.addEventListener("change", render);
-energyRampCheckbox.addEventListener("change", render);
+orderSelect.addEventListener("change", render);
 diversitySlider.addEventListener("input", render);
 
 savePresetBtn.addEventListener("click", () => {

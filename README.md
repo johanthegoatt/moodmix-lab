@@ -12,14 +12,14 @@ MoodMix Lab is a local web project that builds playlists from mood sliders and p
 - Persistent saved profile presets
 - Favorite tracks collection stored locally
 - Mood previews: a short arpeggio per track, major or minor from joy, faster with energy, softer when chill (Gabrielsson & Lindström 2010)
-- Energy ramp keeps the best matches and plays them calm to lively
+- Order the picks best match first, as an energy ramp (calm to lively), or as a smooth flow: the order with the least total mood change across all four moods, found by nearest neighbour plus 2-opt
 
 ## Run
 ```bash
 cd moodmix-lab
 npm run dev
 ```
-Open `http://127.0.0.1:8092/moodmix-lab/index.html`.
+Open the URL `npm run dev` prints.
 
 ## Test
 ```bash

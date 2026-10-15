@@ -124,22 +124,63 @@ function applyEnergyRamp(picked, limit) {
     .sort((left, right) => left.mood.energy - right.mood.energy || right.score - left.score);
 }
 
+const MOODS = ["energy", "focus", "chill", "joy"];
+const moodDistance = (a, b) => Math.hypot(...MOODS.map((key) => a.mood[key] - b.mood[key]));
+
+function pathLength(order) {
+  let total = 0;
+  for (let i = 1; i < order.length; i += 1) total += moodDistance(order[i - 1], order[i]);
+  return total;
+}
+
+// Smooth flow: the order with the smallest total mood change from track to
+// track, across all four moods rather than energy alone. Starts at the
+// calmest track, walks to the nearest unplayed one, then 2-opt swaps any
+// stretch that reverses into a shorter path (the standard tour heuristics;
+// a playlist is a short, open path, so this lands at or near the best order).
+export function smoothFlow(tracks) {
+  if (tracks.length < 3) return [...tracks].sort((a, b) => a.mood.energy - b.mood.energy);
+  const left = [...tracks].sort((a, b) => a.mood.energy - b.mood.energy || a.id.localeCompare(b.id));
+  const order = [left.shift()];
+  while (left.length) {
+    const last = order[order.length - 1];
+    let best = 0;
+    for (let i = 1; i < left.length; i += 1) {
+      if (moodDistance(last, left[i]) < moodDistance(last, left[best])) best = i;
+    }
+    order.push(left.splice(best, 1)[0]);
+  }
+
+  let improved = true;
+  while (improved) {
+    improved = false;
+    for (let i = 1; i < order.length - 1; i += 1) {
+      for (let j = i + 1; j < order.length; j += 1) {
+        const candidate = [...order.slice(0, i), ...order.slice(i, j + 1).reverse(), ...order.slice(j + 1)];
+        if (pathLength(candidate) < pathLength(order) - 1e-9) {
+          order.splice(0, order.length, ...candidate);
+          improved = true;
+        }
+      }
+    }
+  }
+  return order;
+}
+
+export function flowRoughness(tracks) {
+  return tracks.length < 2 ? 0 : pathLength(tracks) / (tracks.length - 1);
+}
+
 export function buildPlaylistAdvanced(profile, catalog = localCatalog, limit = 5, options = {}) {
   const scored = buildPlaylist(profile, catalog, Math.max(1, catalog.length));
   const safeLimit = Math.max(1, Number(limit) || 1);
   const diversityWeight = clamp(options.diversityWeight ?? 50);
 
-  if (options.discovery) {
-    const discovered = pickWithDiversity(profile, scored, safeLimit, diversityWeight);
-    if (options.energyRamp) {
-      return applyEnergyRamp(discovered, safeLimit);
-    }
-    return discovered;
-  }
+  const picked = options.discovery
+    ? pickWithDiversity(profile, scored, safeLimit, diversityWeight)
+    : scored.slice(0, safeLimit);
 
-  if (options.energyRamp) {
-    return applyEnergyRamp(scored.slice(0, safeLimit), safeLimit);
-  }
-
-  return scored.slice(0, safeLimit);
+  if (options.order === "smooth") return smoothFlow(picked);
+  if (options.energyRamp || options.order === "ramp") return applyEnergyRamp(picked, safeLimit);
+  return picked;
 }
